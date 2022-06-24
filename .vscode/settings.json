@@ -1,0 +1,8 @@
+{
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": true,
+    "source.organizeImports": false
+  },
+  "javascript.autoClosingTags": false,
+  "typescript.autoClosingTags": false
+}
