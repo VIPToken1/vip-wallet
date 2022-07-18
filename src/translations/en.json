@@ -129,7 +129,11 @@
   "backup_your_wallet": "Backup Your Wallet",
   "backup_wallet_description": "Please make sure you store your recovery phrase in a safe location. We recommend storing it offline on a peace of paper.",
   "backup_now": "Backup now",
+  "backup_now_desc": "Please back up your wallet seed phrase. You will need it to access your tokens if you lose access to your phone or reset this application. Would you like to back up now?",
   "invalid_phrase": "Invalid phrase",
+  "backup_later": "Backup later",
+  "backup_later_title": "Are you sure you want to backup later?",
+  "backup_later_desc": "It is recommended to back up now. If you lose access to your phone your seed phrase is the only way to restore your wallet. Please back up your 12 word seed phrase as soon as possible. Do you really want to back up later?",
 
   // restore wallet
   "restore_wallet": "Restore Wallet",

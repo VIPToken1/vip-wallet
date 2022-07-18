@@ -1,4 +1,4 @@
-import React, { FC } from 'react';
+import React, { FC, useMemo } from 'react';
 import {
   Alert,
   ImageSourcePropType,
@@ -9,11 +9,12 @@ import { AlertDialog, Button, HStack, Image, Text } from 'native-base';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useNavigation } from '@react-navigation/native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import { useAppDispatch, useTranslations } from 'hooks';
+import { useAppDispatch, useAppSelector, useTranslations } from 'hooks';
 import { Icons } from 'theme';
 import { Colors } from 'theme/colors';
 import { storage } from 'utils';
 import { logout } from 'store/actions';
+import { IUserState } from 'types';
 
 type SettingsRowProps = {
   leftIcon: ImageSourcePropType;
@@ -148,6 +149,7 @@ const Settings = () => {
   const { strings } = useTranslations();
   const navigation = useNavigation<SettingsScreenNavigationProp>();
   const [isLogoutAlert, setIsLogoutAlert] = React.useState(false);
+  const { walletBackup } = useAppSelector<IUserState>(state => state.user);
 
   const cancelRef = React.useRef(null);
 
@@ -199,6 +201,10 @@ const Settings = () => {
               if (item.value === 'logout') {
                 onLogoutPress();
                 return;
+              }
+
+              if (item.value === 'wallet' && !walletBackup?.isBackup) {
+                item.params!.nextRoute = 'RecoveryPhraseWords';
               }
               if (item.navigateTo !== '') {
                 navigation.navigate(item.navigateTo as any, item.params);

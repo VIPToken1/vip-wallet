@@ -9,6 +9,7 @@ import React, {
   useState
 } from 'react';
 import {
+  Alert,
   BackHandler,
   Linking,
   RefreshControl,
@@ -42,6 +43,7 @@ import { Colors } from 'theme/colors';
 import { TokenButton } from 'components/tokenButton';
 import { actions } from 'store';
 import { chain, getVIPLevel } from 'utils';
+import { IUserState } from 'types';
 
 type HomeScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -62,9 +64,10 @@ const Home: FC = () => {
   const { activeWallet, loading, tokens } = useAppSelector(
     state => state.crypto
   );
-  const { currencySign = '$' } = useAppSelector<any>(
-    state => state.user.defaultCurrency
+  const { currencySign = '$' } = useAppSelector(
+    (state: any) => state.user.defaultCurrency
   );
+  const { walletBackup } = useAppSelector<IUserState>(state => state.user);
 
   const timeoutRef = useRef<NodeJS.Timeout>();
 
@@ -136,6 +139,32 @@ const Home: FC = () => {
     await dispatch(actions.updateWalletBalance());
     setTimeout(() => setIsRefreshing(false), 1e3);
   }, []);
+
+  const onPressBuy = () => {
+    if (!walletBackup?.isBackup) {
+      Alert.alert(
+        strings.backup_now,
+        strings.backup_now_desc,
+        [
+          {
+            text: strings.later,
+            onPress: () => Linking.openURL('https://buy.viptoken.io')
+          },
+          {
+            text: 'Yes',
+            onPress: () => {
+              navigation.navigate('Biometrics', {
+                nextRoute: 'RecoveryPhraseWords'
+              });
+            }
+          }
+        ],
+        { cancelable: false }
+      );
+    } else {
+      Linking.openURL('https://buy.viptoken.io');
+    }
+  };
 
   const bnbBalance = calculateCryptoToFiat(activeWallet?.balance);
 
@@ -311,7 +340,8 @@ const Home: FC = () => {
             <TouchableOpacity
               style={styles.buyBtn}
               // onPress={() => navigation.navigate('PurchaseToken')}
-              onPress={() => Linking.openURL('https://buy.viptoken.io')}
+              // onPress={() => Linking.openURL('https://buy.viptoken.io')}
+              onPress={onPressBuy}
             >
               <Text fontSize="18" color={Colors.WHITE}>
                 {strings.buy.toUpperCase()}

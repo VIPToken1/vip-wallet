@@ -14,12 +14,9 @@ import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view
 import { useIsFocused, useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import * as Humanize from 'humanize-plus';
+import numeral from 'numeral';
 import { CustomToast, GradientButton, RoundIcon, SwapModal } from 'components';
-import {
-  TEST_TOKEN_ADDRESS,
-  VIP_TOKEN_ADDRESS,
-  WBNB_ADDRESS
-} from 'constants/index';
+import { VIP_TOKEN_ADDRESS, WBNB_ADDRESS } from 'constants/index';
 import {
   useAppDispatch,
   useAppSelector,
@@ -47,6 +44,7 @@ type SwapBoxProps = {
   isComputing?: boolean;
   onChangeAmount: (text: string) => void;
   mt?: string;
+  isOutput?: boolean;
   maxButton?: JSX.Element;
 };
 
@@ -59,10 +57,12 @@ const SwapBox: React.FC<SwapBoxProps> = ({
   slippage,
   isComputing,
   maxButton,
+  isOutput,
   onChangeAmount,
   ...rest
 }) => {
-  const onChange = (value: string) => onChangeAmount(value.replace(/,/g, '.'));
+  const onChange = (value: string) =>
+    isOutput ? onChangeAmount(value) : onChangeAmount(value.replace(/,/g, '.'));
   return (
     <Box {...rest} bg={Colors.BG_LIGHT} py="14px" px="14px" borderRadius="20px">
       <VStack>
@@ -108,18 +108,22 @@ const SwapBox: React.FC<SwapBoxProps> = ({
               selectionColor={Colors.WHITE}
               alignSelf="flex-end"
               placeholder="0.00"
-              value={amount}
+              value={
+                Number(amount)
+                  ? isOutput
+                    ? numeral(amount).format('0,0.00[00000000]').toString()
+                    : numeral(amount).format('0.[00000000]').toString()
+                  : amount
+              }
               onChangeText={onChange}
               keyboardAppearance="dark"
               keyboardType="decimal-pad"
               returnKeyType="done"
-              maxLength={12}
+              maxLength={isOutput ? undefined : 12}
+              editable={!isOutput}
             />
           </HStack>
         </HStack>
-        {/* <Text textAlign={'right'} fontSize="22px" fontWeight={'700'}>
-          {amount}
-        </Text> */}
         <HStack mt="15px" justifyContent={'space-between'}>
           <Text color={Colors.PLACEHOLDER} fontSize="14px" fontWeight={'500'}>
             Balance : {balance}
@@ -204,13 +208,15 @@ const Swap = () => {
       swapFrom.contractAddress as IAvaialablePair,
       swapTo.contractAddress as IAvaialablePair
     ];
-    console.log('addresses ', addresses);
     return swapUtils.getSwapPairs(addresses, privateKey);
   }, [privateKey, swapFrom, swapTo]);
 
   const onInterchange = () => {
     setInterchanged(prev => !prev);
-    setSwapFrom(swapTo);
+    setSwapFrom({
+      ...swapTo,
+      amount: numeral(swapTo.amount).value()?.toString()
+    });
     setSwapTo(swapFrom);
   };
 
@@ -253,7 +259,7 @@ const Swap = () => {
       }: any = await swapUtils.getAmountsOut(
         activeWallet.privateKey,
         type === 'from' ? swapPair : swapPair.reverse(),
-        value,
+        numeral(value).value()?.toString() || '0',
         slippage
       );
       setIsComputing(false);
@@ -264,7 +270,6 @@ const Swap = () => {
         );
         return;
       }
-      console.log('get amounts out ', _amountsOut);
       setAmountsOut(_amountsOut);
       return _amountsOut;
     }
@@ -275,9 +280,9 @@ const Swap = () => {
       onChangeAmount(maxBalance.toString(), 'from');
     } else {
       setIsComputingMax(true);
-      const maximumAmount = await chain.calculateMaxAmount(
-        activeWallet?.balance
-      );
+      const extraGas = 0.005; // hard coded value to let transactions through
+      const maximumAmount =
+        (await chain.calculateMaxAmount(activeWallet?.balance)) - extraGas;
       if (Number(maximumAmount) > 0) {
         onChangeAmount(maximumAmount?.toString(), 'from');
       }
@@ -288,7 +293,8 @@ const Swap = () => {
   const onSwap = async () => {
     if (activeWallet) {
       setIsSubmitting(true);
-      const amountToSwap = interchanged ? swapTo.amount : swapFrom.amount;
+      const amountToSwap =
+        numeral(interchanged ? swapTo.amount : swapFrom.amount).value() || 0;
       if (!interchanged) {
         // @ts-ignore
         if (amountToSwap > tokens[2]?.balance) {
@@ -363,6 +369,7 @@ const Swap = () => {
     isSubmitting ||
     Number(swapFrom.amount) <= 0 ||
     Number(swapTo.amount) <= 0 ||
+    Number(swapFrom.amount) >= maxBalance ||
     activeWallet?.balance <= 0;
 
   return (
@@ -433,6 +440,7 @@ const Swap = () => {
             balance={`${swapTo.balance} ${swapTo.name}`}
             slippage={slippage}
             isComputing={isComputing}
+            isOutput
           />
           <View mt={'20px'} mb="80px">
             <GradientButton

@@ -1,11 +1,18 @@
-import React, { useState } from 'react';
-import { Image, Stack, Text, VStack, View } from 'native-base';
-import { useNavigation } from '@react-navigation/native';
+import React, { useEffect, useState } from 'react';
+import { Alert } from 'react-native';
+import { Image, Stack, Text, VStack, View, Button } from 'native-base';
+import { useIsFocused, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Layout, GradientButton, CustomCheckbox } from 'components';
-import { useTranslations } from 'hooks';
+import {
+  useAppDispatch,
+  useAppSelector,
+  useLoader,
+  useTranslations
+} from 'hooks';
 import { Icons } from 'theme';
 import { Colors } from 'theme/colors';
+import { actions } from 'store';
 
 type BackupWalletScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -14,8 +21,42 @@ type BackupWalletScreenNavigationProp = NativeStackNavigationProp<
 
 const BackupWallet = () => {
   const navigation = useNavigation<BackupWalletScreenNavigationProp>();
+  const dispatch = useAppDispatch();
+  const { setLoader } = useLoader();
   const { strings } = useTranslations();
+  const isFocused = useIsFocused();
   const [isAccepted, setIsAccepted] = useState(false);
+  const { phrase } = useAppSelector(state => state.crypto);
+
+  const onBackupLater = () => {
+    Alert.alert(
+      strings.backup_later_title,
+      strings.backup_later_desc,
+      [
+        { text: strings.cancel },
+        {
+          text: strings.confirm,
+          style: 'default',
+          onPress: () => {
+            setLoader(true);
+            setTimeout(() => dispatch(actions.generateRecoveryPhrase(16)), 1e3);
+          }
+        }
+      ],
+      { cancelable: false }
+    );
+  };
+
+  useEffect(() => {
+    if (phrase && isFocused) {
+      setTimeout(() => {
+        setLoader(false);
+        dispatch(actions.login());
+        navigation.navigate('Home');
+      }, 2e3);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phrase, isFocused]);
 
   return (
     <Layout flex={1}>
@@ -54,12 +95,22 @@ const BackupWallet = () => {
           disabled={!isAccepted}
           onPress={() => navigation.navigate('RecoveryPhraseWords')}
         />
+        <Button
+          size="lg"
+          variant="link"
+          mt="4"
+          mb="2"
+          onPress={onBackupLater}
+          _text={{ color: Colors.WHITE }}
+        >
+          {strings.backup_later}
+        </Button>
         {/* <Text
-          mt="2"
+          mt="4"
           fontSize={18}
           textDecorationLine="underline"
           textAlign="center"
-          onPress={() => navigation.navigate('Home')}
+          onPress={onBackupLater}
         >
           {strings.later}
         </Text> */}

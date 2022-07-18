@@ -1,32 +1,19 @@
 import React, { FC } from 'react';
+import { Alert, FlatList, TouchableOpacity } from 'react-native';
 import { HStack, Image, View, Text, VStack } from 'native-base';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { BackIcon } from 'components';
-import { useAppSelector, useFiatPrice, useTranslations } from 'hooks';
+import { useAppSelector, useTranslations } from 'hooks';
 import { Icons } from 'theme';
 import { Colors } from 'theme/colors';
-import { FlatList, TouchableOpacity } from 'react-native';
+import { IUserState } from 'types';
 
 type PayingScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
   'Send' | 'Receive'
 >;
 type PayingScreenRouteProp = RouteProp<RootStackParamList, 'Send' | 'Receive'>;
-const List = [
-  {
-    name: 'BNB',
-    image: Icons.bnbIcon
-  },
-  {
-    name: 'WBNB',
-    image: Icons.bnbIcon
-  },
-  {
-    name: 'VIP',
-    image: Icons.vipIcon
-  }
-];
 
 const Send: FC = () => {
   const navigation = useNavigation<PayingScreenNavigationProp>();
@@ -35,12 +22,48 @@ const Send: FC = () => {
 
   const { activeWallet, tokens } = useAppSelector(state => state.crypto);
   const { currencySign = '$' } = useAppSelector(
-    state => state.user.defaultCurrency
+    (state: any) => state.user.defaultCurrency
   );
+  const { walletBackup } = useAppSelector<IUserState>(state => state.user);
 
   const { strings } = useTranslations();
 
-  const { calculateCryptoToFiat } = useFiatPrice();
+  const handleNavigation = (token: any) => {
+    if (route.name !== 'Send' && !walletBackup?.isBackup) {
+      Alert.alert(
+        strings.backup_now,
+        strings.backup_now_desc,
+        [
+          {
+            text: strings.cancel,
+            onPress: () => {
+              navigation.navigate(
+                route.name === 'Send' ? 'SendToken' : 'ReceiveQr',
+                {
+                  token,
+                  scannedAddress: params?.scannedAddress
+                }
+              );
+            }
+          },
+          {
+            text: 'Yes',
+            onPress: () => {
+              navigation.navigate('Biometrics', {
+                nextRoute: 'RecoveryPhraseWords'
+              });
+            }
+          }
+        ],
+        { cancelable: false }
+      );
+    } else {
+      navigation.navigate(route.name === 'Send' ? 'SendToken' : 'ReceiveQr', {
+        token,
+        scannedAddress: params?.scannedAddress
+      });
+    }
+  };
 
   return (
     <>
@@ -76,14 +99,7 @@ const Send: FC = () => {
           )}
           renderItem={({ item: token }) => {
             return (
-              <TouchableOpacity
-                onPress={() =>
-                  navigation.navigate(
-                    route.name === 'Send' ? 'SendToken' : 'ReceiveQr',
-                    { token, scannedAddress: params?.scannedAddress }
-                  )
-                }
-              >
+              <TouchableOpacity onPress={() => handleNavigation(token)}>
                 <HStack
                   justifyContent={'space-between'}
                   alignItems={'center'}
